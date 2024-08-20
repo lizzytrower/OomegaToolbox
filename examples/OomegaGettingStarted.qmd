@@ -1,0 +1,190 @@
+---
+title: "Getting Started with OomegaSolver"
+author: Lizzy Trower
+format: html
+embed-resources: true
+editor: visual
+theme: flatly
+toc: true
+bibliography: references.bib
+---
+
+## Introduction
+
+This document will walk through the basic functionality of the Oomega toolbox, showing some examples of how to use the main functions (OomegaSolver and DeqSolver), and the helper functions.
+
+### Load libraries
+
+```{r load-libraries}
+library(OomegaToolbox)
+```
+
+## OomegaSolver
+
+The OomegaSolver function is designed to accept a measured median ooid diameter as its primary input, and returns the estimated $\Omega$ value of the environment in which those ooids formed. This $\Omega$ value will be for the mineral that you choose the correct input parameters for (most commonly, aragonite, or calcite). Many other input parameters are available and its often appropriate to use them to override the defaults to make the calculation appropriate for your conditions.
+
+### Basic syntax
+
+At its simplest level, you can use the OomegaSolver function with a single input of measured median ooid diameter (*D*). All the other parameters have defaults set that are reasonable for aragonite in modern tropical seawater. Note that the OomegaSolver tool is mainly in SI units, so **the expected input units of *D* are meters**. This is important; you will get a wildly incorrect answer if you input your grain diameter in units of microns. Here's the most basic example:
+
+```{r Oomega-basic}
+D <- 500*10^-6
+Oomega <- OomegaSolver(D)
+print(Oomega)
+```
+
+If you want to run OomegaSolver for multiple values of *D*, you'll need to use the function mapply, since OomegaSolver isn't designed to take a vector as an input:
+
+```{r Oomega-mapply}
+Dvector <- c(457,523,642)*10^-6
+Oomegavector <- mapply(OomegaSolver,D = Dvector)
+print(Oomegavector)
+```
+
+### Correcting thin section measurements of *D*
+
+For applications to modern environments, *D* can be measured for loose sediment directly using a grain size analyzer or (less ideally) sieve analysis. However, for most applications to rocks, the most straightforward way to measure grain size may be from thin sections. This presents a challenge due to the random cuts effect of thin sections: most cross sections of grains in a thin section will not be through the grain's center of mass and therefore measurements of diameter will underestimate the true grain diameter. The Oomega Toolbox includes a function ("kellerhals") based on @kellerhals1975 that you can opt to use to correct for this effect. The input value for this function should be the median intermediate axis diameter measured from a thin section; the output is the estimated true median intermediate axis diameter, which is the value you'd use as the input for OomegaSolver.
+
+Note that this application of the functions in @kellerhals1975 makes the simplifying assumption that the intermediate and minor axis dimensions are equal (i.e., k~2~ = 1). This is a reasonable assumption for ooids, but may not be a good assumption for other grain types. This is also not the only algorithm or approach in the literature to correct grain size measurements from thin sections - users are encouraged to read the original paper and do their own literature review to decide if this is the right approach for your samples.
+
+Here's an example of how this function works:
+
+```{r kellerhals-correction}
+b50 <- 450 #measured median intermediate axis diameter, any units
+D50 <- kellerhals(b50) #estimated D50, same units as input 
+print (D50)
+```
+
+### Other input parameters
+
+In addition to ooid diameter (*D*), OomegaSolver has 11 other parameters that can be set. These parameters all come with a default value so that you can run the function with only an input for *D*, but in most applications, you will likely want to set some of these other parameters to fit your system. This section will walk through each parameter and include explanations of helper functions that are available for some of them.
+
+#### Precipitation kinetics (*k* and *n*)
+
+CaCO~3~ precipitation rate in the OomegaSolver and DeqSolver functions is parameterized with a standard precipitation rate function: $R_{precip}=k(\Omega-1)^n$ . The parameters *k* (rate constant, umol/m^2^/hr) and *n* (reaction order, dimensionless) vary as a function of mineralogy (e.g., calcite vs. aragonite) and temperature. Several studies have used experiments to provide empirical constraints for these parameters for a set of known temperatures [@burton1987; @lopez2009]. The temperatures in @burton1987 are 5, 25, and 37°C for both aragonite and calcite; the temperatures in @lopez2009 are 5, 25, 40, and 55°C for calcite only. Both of these studies were conducted in artificial seawater so are ideal for applications to marine systems. For both calcite and aragonite, precipitation kinetics do not vary significantly as a function of salinity in seawater-like solutions [@zhong1989], so differences in salinity of ancient seawater would likely not influence these kinetic parameters. Unfortunately, there is a paucity of studies that examine calcite and aragonite precipitation kinetics in solutions that more closely resemble those of carbonate-producing lakes. Currently, the best solution is assume similar precipitation kinetics as in a marine system.
+
+To select the appropriate kinetics for your system, you must first determine the original mineralogy of your ooids (e.g., calcite or aragonite), then determine the likely original temperature. If the temperature is close to one of the temperatures used in the empirical studies, you can use the *k* and *n* values directly from that study. However, if the temperature is in between experimental temperatures and/or you are examining a time series in which you know temperature changes, you can opt to interpolate the values of *k* and *n* between the empirical constraints because both parameters vary approximately linearly as a function of temperature. The Oomega Toolbox includes two helper functions that allow you to do this. Note that you can also use these functions to look up the *k* and *n* values for the experimental temperatures from each paper.
+
+The aragonitekinetics function uses the empirical constraints from @burton1987. It accepts temperature in °C as its input and outputs a two-item list of k and n values. Here is an example of how it works:
+
+```{r aragonitekinetics-example}
+tempC_arag <- 27
+kinetics_arag <- aragonitekinetics(tempC_arag)
+print(kinetics_arag$k)
+print(kinetics_arag$n)
+```
+
+The calcitekinetics function gives you the choice of the empirical constraints from @burton1987 or from @lopez2009. It accepts temperature in °C as its required input and has an optional second input that you can use to swap data source. @burton1987 is the default data source. It is recommended to choose @burton1987 constraints if your application is comparing calcite and aragonite so that the kinetics for both minerals come from the same source. Here are examples of how this function works:
+
+```{r calcitekinetics-example}
+tempC_calc <- 27
+kinetics_calc_BW <- calcitekinetics(tempC_calc)
+print(kinetics_calc_BW$k)
+print(kinetics_calc_BW$n)
+kinetics_calc_L <- calcitekinetics(tempC_calc,datasource = "Lopezetal")
+print(kinetics_calc_L$k)
+print(kinetics_calc_L$n)
+```
+
+You can use the outputs of these functions, or other kinetic parameters you derive from a different source, to set the kinetics in the OomegaSolver function:
+
+```{r Oomega-kinetics}
+Oomega_kinetics <- OomegaSolver(D,
+                                k = kinetics_arag$k,
+                                n = kinetics_arag$n)
+print(Oomega_kinetics)
+```
+
+#### Mineral properties
+
+OomegaSolver includes two parameters that can be customized to fit the properties of the original mineralogy of the ooid: density (kg/m^3^) and molar mass (g/mol). There are no helper functions to solve for these, but recommended values for density are 2800 kg/m^3^ for aragonite (default) and 2700 kg/m^3^ for calcite; the molar mass of CaCO~3~ is 100.0869 g/mol (this is set as the default) - this would need to be different if, for example, you wanted to model ikaite or another hydrated calcium carbonate mineral. Here is an example of how to set density for calcite:
+
+```{r Oomega-mineral-density}
+Oomega_calc <- OomegaSolver(D,
+                            k = kinetics_calc_BW$k,
+                            n = kinetics_calc_BW$n,
+                            rho_s = 2700)
+print(Oomega_calc)
+```
+
+#### Fluid properties
+
+The density and kinematic viscosity of the fluid (i.e., seawater or lake water) are also parameters that can be adjusted. For example, for seawater both of these properties vary as a function of temperature and salinity. The Oomega Toolbox includes two helper functions for calculating these parameters: seawaterdensity and seawaterdynamicviscosity. There is a paucity of comparable studies to estimate the density and viscosity of lake waters as a function of temperature and salinity (or, alternatively, ionic strength), but using seawater-based estimates is certainly going to be better than assuming pure water values.
+
+The seawaterdensity function is an implementation of @millero1981 and is valid for temperatures in the range of -2 to 40°C and salinities in the range of 0-42 g/kg. Additional functions are available in the literature for temperatures and/or salinities outside of this range, and/or for elevated pressures [@nayar2016; @sharqawy2010]. This is a simple function that requires temperature in °C and salinity in g/kg as its inputs:
+
+```{r seawater-density}
+sal_sw <- 37
+rho_sw <- seawaterdensity(tempC_arag,sal_sw)
+print(rho_sw)
+```
+
+The seawaterdynamicviscosity function is an implementation of @isdale1972 and is valid for temperatures in the range of 10 to 180°C and salinities in the range of 0-150 g/kg. Again, additional functions are available in the literature for temperatures and/or salinities outside of this range, and/or for elevated pressures [@nayar2016; @sharqawy2010]. This function calculates dynamic viscosity, 𝜇, but OomegaSolver requires kinematic viscosity, 𝜈, which can be easily calculated as: $\nu=\frac{\mu}{\rho_f}$, where $\rho_f$ is the fluid density. This is also a simple function that requires temperature in °C and salinity in g/kg as its inputs:
+
+```{r seawater-viscosity}
+mu_sw <- seawaterdynamicviscosity(tempC_arag,sal_sw)
+nu_sw <- mu_sw/rho_sw
+print(nu_sw)
+```
+
+You can use the outputs of these functions, or other algorithms that you choose, to set the fluid property parameters in OomegaSolver:
+
+```{r Oomega-seawater-properties}
+Oomega_sw <- OomegaSolver(D,
+                          k = kinetics_arag$k,
+                          n = kinetics_arag$n,
+                          rho_f = rho_sw,
+                          nu = nu_sw)
+print(Oomega_sw)
+```
+
+#### Other sediment transport parameters
+
+There are two additional parameters that can be modified:
+
+-   *H*, water depth (m) - this is pretty self-explanatory
+
+-   *f*, intermittency (dimensionless, 0\<*f*≤1, where f = 0 would imply no movement and f = 1 implies constant movement) - particularly for geological applications, this parameter is difficult to directly constrain, so the recommended approach is to run calculations across a plausible range of values, with the uncertainty with respect to intermittency driving much of the uncertainty in the $\Omega$ estimate [@trower2022]. It is possible to calculate theoretical minimum and maximum intermittency values; this approach will be addressed in a separate document.
+
+Here is the syntax to modify *H* and *f*:
+
+```{r Oomega-transport-parameters}
+H <- 2
+Oomega_H <- OomegaSolver(D,
+                         k = kinetics_arag$k,
+                         n = kinetics_arag$n,
+                         H = H)
+print(Oomega_H)
+f <- 0.1
+Oomega_f <- OomegaSolver(D,
+                         k = kinetics_arag$k,
+                         n = kinetics_arag$n,
+                         intermittency = f)
+print(Oomega_f)
+```
+
+## DeqSolver
+
+The DeqSolver function is structured in a similar way to and has similar optional parameters as OomegaSolver, but is designed to accept $\Omega$ as an input and return the calculated equilibrium grain diameter (*D~eq~*) as the output. This function requires the uniroot.all function from the rootSolve package.
+
+### Basic syntax
+
+As with OomegaSolver, DeqSolver is designed so it can be run with $\Omega$ as the only input, with all other parameters coming with default values set. Here is a basic example:
+
+```{r DeqSolver-basic}
+Omega <- 6
+Deq <- DeqSolver(Omega)
+print(Deq)
+```
+
+Also similar to OomegaSolver, DeqSolver cannot take a vector as an input, so you need to use mapply if you want to calculate the *D~eq~* for multiple values of $\Omega$ in a single line of code:
+
+```{r DeqSolver-mapply}
+Omega_vector <- seq(from=2,to=8,by=1)
+Deq_vector <- mapply(DeqSolver,Omega = Omega_vector)
+print(Deq_vector)
+```
+
+### Other input parameters
+
+The other input parameters available to DeqSolver are the same as for OomegaSolver, so see the OomegaSolver [Other input parameters] section for more information on each parameter including available helper functions.
