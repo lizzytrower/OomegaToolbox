@@ -38,8 +38,6 @@ DeqSolver <- function(
     H = 1, #water depth (m)
     intermittency = 0.15) {
   
-  library(rootSolve)
-  
   R <- (rho_s - rho_f)/rho_f #submerged specific density
   A1 <- 0.36 #(dimensionless)
   kv <- 9*10^5 #(dimensionless)
@@ -186,6 +184,6 @@ DeqSolver <- function(
     R_growth(D)-intermittency*mapply(R_abrasion,D)
   }
   
-  root <- uniroot.all(dDdt,c(250*10^-6,10000*10^-6),tol=10^-6)
+  root <- rootSolve::uniroot.all(dDdt,c(250*10^-6,10000*10^-6),tol=10^-6)
   return(root*10^6)
 }

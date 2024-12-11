@@ -23,8 +23,6 @@
 calcitekinetics <- function(tempC,
                             datasource = "BurtonWalter") {
   
-  library(pracma)
-  
   if (datasource == "BurtonWalter") {
     caln <- c(0.6, 1.9, 2.3)
     calk <- c(14, 3.9, 3.7)
@@ -41,8 +39,8 @@ calcitekinetics <- function(tempC,
     }
     
     if (tempC >= 5 && tempC <= 37) {
-      k <- interp1(calT, calk, tempC)
-      n <- interp1(calT, caln, tempC)
+      k <- pracma::interp1(calT, calk, tempC)
+      n <- pracma::interp1(calT, caln, tempC)
     }
   }
   
@@ -62,8 +60,8 @@ calcitekinetics <- function(tempC,
     }
     
     if (tempC >= 5 && tempC <= 55) {
-      k <- 10^interp1(calT, callogk, tempC)
-      n <- interp1(calT, caln, tempC)
+      k <- 10^pracma::interp1(calT, callogk, tempC)
+      n <- pracma::interp1(calT, caln, tempC)
     }
   }
   

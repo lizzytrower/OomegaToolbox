@@ -8,7 +8,7 @@
 
 <meta name="author" content="Lizzy Trower">
 
-<title>Getting Started with OomegaSolver</title>
+<title>Using Intermittency Constraint Functions</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -3248,16 +3248,19 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#load-libraries" id="toc-load-libraries" class="nav-link" data-scroll-target="#load-libraries">Load libraries</a></li>
   </ul></li>
-  <li><a href="#oomegasolver" id="toc-oomegasolver" class="nav-link" data-scroll-target="#oomegasolver">OomegaSolver</a>
+  <li><a href="#critical-minimum-intermittency" id="toc-critical-minimum-intermittency" class="nav-link" data-scroll-target="#critical-minimum-intermittency">Critical (minimum) intermittency</a>
   <ul class="collapse">
+  <li><a href="#theory" id="toc-theory" class="nav-link" data-scroll-target="#theory">Theory</a></li>
+  <li><a href="#cement-thickness-ratio" id="toc-cement-thickness-ratio" class="nav-link" data-scroll-target="#cement-thickness-ratio">Cement thickness ratio</a></li>
+  <li><a href="#other-parameters" id="toc-other-parameters" class="nav-link" data-scroll-target="#other-parameters">Other parameters</a></li>
   <li><a href="#basic-syntax" id="toc-basic-syntax" class="nav-link" data-scroll-target="#basic-syntax">Basic syntax</a></li>
-  <li><a href="#correcting-thin-section-measurements-of-d" id="toc-correcting-thin-section-measurements-of-d" class="nav-link" data-scroll-target="#correcting-thin-section-measurements-of-d">Correcting thin section measurements of <em>D</em></a></li>
-  <li><a href="#other-input-parameters" id="toc-other-input-parameters" class="nav-link" data-scroll-target="#other-input-parameters">Other input parameters</a></li>
   </ul></li>
-  <li><a href="#deqsolver" id="toc-deqsolver" class="nav-link" data-scroll-target="#deqsolver">DeqSolver</a>
+  <li><a href="#maximum-intermittency" id="toc-maximum-intermittency" class="nav-link" data-scroll-target="#maximum-intermittency">Maximum intermittency</a>
   <ul class="collapse">
+  <li><a href="#theory-1" id="toc-theory-1" class="nav-link" data-scroll-target="#theory-1">Theory</a></li>
+  <li><a href="#maximum-omega" id="toc-maximum-omega" class="nav-link" data-scroll-target="#maximum-omega">Maximum <span class="math inline">\(\Omega\)</span></a></li>
+  <li><a href="#other-parameters-1" id="toc-other-parameters-1" class="nav-link" data-scroll-target="#other-parameters-1">Other parameters</a></li>
   <li><a href="#basic-syntax-1" id="toc-basic-syntax-1" class="nav-link" data-scroll-target="#basic-syntax-1">Basic syntax</a></li>
-  <li><a href="#other-input-parameters-1" id="toc-other-input-parameters-1" class="nav-link" data-scroll-target="#other-input-parameters-1">Other input parameters</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -3266,7 +3269,7 @@ window.Quarto = {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Getting Started with OomegaSolver</h1>
+<h1 class="title">Using Intermittency Constraint Functions</h1>
 </div>
 
 
@@ -3291,7 +3294,8 @@ window.Quarto = {
 
 <section id="introduction" class="level2">
 <h2 class="anchored" data-anchor-id="introduction">Introduction</h2>
-<p>This document will walk through the basic functionality of the Oomega toolbox, showing some examples of how to use the main functions (OomegaSolver and DeqSolver), and the helper functions.</p>
+<p>Intermittency (<em>f</em>) is a parameter in the OomegaSolver framework that describes the amount of time that ooids spend trapped within a bedform (i.e., a dune, or a ripple). This parameter is important because it scales the abrasion rate, using the assumption that grains are only abrading when they are actively being transported at the sediment surface, and not when they are at rest within a bedform. This parameter is difficult to constrain directly for applications to deep time, so instead the general approach has been to explore a range of plausible <em>f</em> values to capture the uncertainty with respect to this parameter <span class="citation" data-cites="trower2022">(<a href="#ref-trower2022" role="doc-biblioref">Trower et al. 2022</a>)</span>.</p>
+<p>To augment this approach, the OomegaSolver package includes two additional functions that can be used to provide maximum and minimum constraints on intermittency. Note that these values should always be considered in the context of other information. For example, for many sand-sized ooids, the <em>f<sub>max</sub></em> solver function will provide a value of 1, but this does not mean that constant transport is physically realistic. The sections below explain the theory behind, and application of these two functions.</p>
 <section id="load-libraries" class="level3">
 <h3 class="anchored" data-anchor-id="load-libraries">Load libraries</h3>
 <div class="cell">
@@ -3299,234 +3303,119 @@ window.Quarto = {
 </div>
 </section>
 </section>
-<section id="oomegasolver" class="level2">
-<h2 class="anchored" data-anchor-id="oomegasolver">OomegaSolver</h2>
-<p>The OomegaSolver function is designed to accept a measured median ooid diameter as its primary input, and returns the estimated <span class="math inline">\(\Omega\)</span> value of the environment in which those ooids formed. This <span class="math inline">\(\Omega\)</span> value will be for the mineral that you choose the correct input parameters for (most commonly, aragonite, or calcite). Many other input parameters are available and its often appropriate to use them to override the defaults to make the calculation appropriate for your conditions.</p>
+<section id="critical-minimum-intermittency" class="level2">
+<h2 class="anchored" data-anchor-id="critical-minimum-intermittency">Critical (minimum) intermittency</h2>
+<section id="theory" class="level3">
+<h3 class="anchored" data-anchor-id="theory">Theory</h3>
+<p>We define critical intermittency as the frequency of movement below which ooids will be cemented together (i.e., form a hardground), rather than continue to grow as independent coated grains. The calculation of this critical intermittency involves comparing the timescales for a critical cement thickness to form (here defined as a specific ratio of equilibrium grain diameter) and the dune storage time. When using this function, keep in mind that the critical intermittency is most likely to provide a useful constraint for smaller ooids, in which the critical cement thickness is small.</p>
+</section>
+<section id="cement-thickness-ratio" class="level3">
+<h3 class="anchored" data-anchor-id="cement-thickness-ratio">Cement thickness ratio</h3>
+<p>The most important parameter here is the cement thickness ratio. In theory, the thickness of cement that would completely occlude the pore spaces between grains might scale directly with the grain diameter (cement thickness ratio = 1). However, field observations suggest that the cement thickness needed to form hardgrounds is much less than this, typically about 2-5% of the grain diameter <span class="citation" data-cites="smith2020">(<a href="#ref-smith2020" role="doc-biblioref">Smith et al. 2020</a>)</span>. In theory, this parameter could be constrained directly for geological or modern applications if there are hardground intraclasts in which the cement thickness can be measured.</p>
+</section>
+<section id="other-parameters" class="level3">
+<h3 class="anchored" data-anchor-id="other-parameters">Other parameters</h3>
+<p>Importantly, the timescale for hardground formation is also dependent on precipitation rate (and therefore <span class="math inline">\(\Omega\)</span>, <em>k</em>, and <em>n</em>). What should one choose for the <span class="math inline">\(\Omega\)</span> value here if the critical intermittency is being calculated prior to using measurements of grain diameter to solve for <span class="math inline">\(\Omega\)</span>? One approach would be to choose a minimum plausible value for the system, such as <span class="math inline">\(\Omega\)</span> = 2. Alternatively, if this calculation is being applied to a modern system in which <span class="math inline">\(\Omega\)</span> is known, then that value can be used.</p>
+<p>This function also includes a variety of parameters to describe dune scale and wave properties, which are used to calculate the dune residence time. The defaults for the system were chosen to characterize the modern Ambergris shoal, but these values can be customized to fit your particular system.</p>
+<p>With respect to other customizable parameters, the key here is to use the same values as you plan to use for OomegaSolver so the conditions of the critical intermittency calculation match the planned application. See the documentation for OomegaSolver for more information about other parameters.</p>
+</section>
 <section id="basic-syntax" class="level3">
 <h3 class="anchored" data-anchor-id="basic-syntax">Basic syntax</h3>
-<p>At its simplest level, you can use the OomegaSolver function with a single input of measured median ooid diameter (<em>D</em>). All the other parameters have defaults set that are reasonable for aragonite in modern tropical seawater. Note that the OomegaSolver tool is mainly in SI units, so <strong>the expected input units of <em>D</em> are meters</strong>. This is important; you will get a wildly incorrect answer if you input your grain diameter in units of microns. Here’s the most basic example:</p>
+<p>Here is a simple example of the syntax to use this function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="dv">500</span><span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Oomega <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D)</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>D <span class="ot">&lt;-</span> <span class="dv">300</span><span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Omega_min <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>f_crit1 <span class="ot">&lt;-</span> <span class="fu">f_crit_solver</span>(<span class="at">D =</span> D,</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">Omega =</span> Omega_min)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_crit1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 5.65726</code></pre>
+<pre><code>[1] 0.02284374</code></pre>
 </div>
 </div>
-<p>If you want to run OomegaSolver for multiple values of <em>D</em>, you’ll need to use the function mapply, since OomegaSolver isn’t designed to take a vector as an input:</p>
+<p>This function can also be used for multiple values of D, or multiple values of <span class="math inline">\(\Omega\)</span> by using the mapply function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>Dvector <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">457</span>,<span class="dv">523</span>,<span class="dv">642</span>)<span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>Oomegavector <span class="ot">&lt;-</span> <span class="fu">mapply</span>(OomegaSolver,<span class="at">D =</span> Dvector)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomegavector)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>D_vector <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">300</span>,<span class="dv">400</span>,<span class="dv">500</span>)<span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>Omega_min <span class="ot">&lt;-</span> <span class="dv">2</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>f_crit2 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(f_crit_solver,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">D =</span> D_vector,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>                  <span class="at">Omega =</span> Omega_min)</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_crit2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 5.149754 5.925760 7.306618</code></pre>
+<pre><code>[1] 0.0228437360 0.0027510453 0.0007857268</code></pre>
 </div>
-</div>
-</section>
-<section id="correcting-thin-section-measurements-of-d" class="level3">
-<h3 class="anchored" data-anchor-id="correcting-thin-section-measurements-of-d">Correcting thin section measurements of <em>D</em></h3>
-<p>For applications to modern environments, <em>D</em> can be measured for loose sediment directly using a grain size analyzer or (less ideally) sieve analysis. However, for most applications to rocks, the most straightforward way to measure grain size may be from thin sections. This presents a challenge due to the random cuts effect of thin sections: most cross sections of grains in a thin section will not be through the grain’s center of mass and therefore measurements of diameter will underestimate the true grain diameter. The Oomega Toolbox includes a function (“kellerhals”) based on <span class="citation" data-cites="kellerhals1975">Kellerhals, Shaw, and Arora (<a href="#ref-kellerhals1975" role="doc-biblioref">1975</a>)</span> that you can opt to use to correct for this effect. The input value for this function should be the median intermediate axis diameter measured from a thin section; the output is the estimated true median intermediate axis diameter, which is the value you’d use as the input for OomegaSolver.</p>
-<p>Note that this application of the functions in <span class="citation" data-cites="kellerhals1975">Kellerhals, Shaw, and Arora (<a href="#ref-kellerhals1975" role="doc-biblioref">1975</a>)</span> makes the simplifying assumption that the intermediate and minor axis dimensions are equal (i.e., k<sub>2</sub> = 1). This is a reasonable assumption for ooids, but may not be a good assumption for other grain types. This is also not the only algorithm or approach in the literature to correct grain size measurements from thin sections - users are encouraged to read the original paper and do their own literature review to decide if this is the right approach for your samples.</p>
-<p>Here’s an example of how this function works:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>b50 <span class="ot">&lt;-</span> <span class="dv">450</span> <span class="co">#measured median intermediate axis diameter, any units</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>D50 <span class="ot">&lt;-</span> <span class="fu">kellerhals</span>(b50) <span class="co">#estimated D50, same units as input </span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span> (D50)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>Omega_min_vector <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">3</span>,<span class="dv">4</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>f_crit3 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(f_crit_solver,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                  <span class="at">D =</span> D,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">Omega =</span> Omega_min_vector)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_crit3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 545.805</code></pre>
-</div>
-</div>
-</section>
-<section id="other-input-parameters" class="level3">
-<h3 class="anchored" data-anchor-id="other-input-parameters">Other input parameters</h3>
-<p>In addition to ooid diameter (<em>D</em>), OomegaSolver has 11 other parameters that can be set. These parameters all come with a default value so that you can run the function with only an input for <em>D</em>, but in most applications, you will likely want to set some of these other parameters to fit your system. This section will walk through each parameter and include explanations of helper functions that are available for some of them.</p>
-<section id="precipitation-kinetics-k-and-n" class="level4">
-<h4 class="anchored" data-anchor-id="precipitation-kinetics-k-and-n">Precipitation kinetics (<em>k</em> and <em>n</em>)</h4>
-<p>CaCO<sub>3</sub> precipitation rate in the OomegaSolver and DeqSolver functions is parameterized with a standard precipitation rate function: <span class="math inline">\(R_{precip}=k(\Omega-1)^n\)</span> . The parameters <em>k</em> (rate constant, umol/m<sup>2</sup>/hr) and <em>n</em> (reaction order, dimensionless) vary as a function of mineralogy (e.g., calcite vs. aragonite) and temperature. Several studies have used experiments to provide empirical constraints for these parameters for a set of known temperatures <span class="citation" data-cites="burton1987 lopez2009">(<a href="#ref-burton1987" role="doc-biblioref">Burton and Walter 1987</a>; <a href="#ref-lopez2009" role="doc-biblioref">Lopez, Zuddas, and Faivre 2009</a>)</span>. The temperatures in <span class="citation" data-cites="burton1987">Burton and Walter (<a href="#ref-burton1987" role="doc-biblioref">1987</a>)</span> are 5, 25, and 37°C for both aragonite and calcite; the temperatures in <span class="citation" data-cites="lopez2009">Lopez, Zuddas, and Faivre (<a href="#ref-lopez2009" role="doc-biblioref">2009</a>)</span> are 5, 25, 40, and 55°C for calcite only. Both of these studies were conducted in artificial seawater so are ideal for applications to marine systems. For both calcite and aragonite, precipitation kinetics do not vary significantly as a function of salinity in seawater-like solutions <span class="citation" data-cites="zhong1989">(<a href="#ref-zhong1989" role="doc-biblioref">Zhong and Mucci 1989</a>)</span>, so differences in salinity of ancient seawater would likely not influence these kinetic parameters. Unfortunately, there is a paucity of studies that examine calcite and aragonite precipitation kinetics in solutions that more closely resemble those of carbonate-producing lakes. Currently, the best solution is assume similar precipitation kinetics as in a marine system.</p>
-<p>To select the appropriate kinetics for your system, you must first determine the original mineralogy of your ooids (e.g., calcite or aragonite), then determine the likely original temperature. If the temperature is close to one of the temperatures used in the empirical studies, you can use the <em>k</em> and <em>n</em> values directly from that study. However, if the temperature is in between experimental temperatures and/or you are examining a time series in which you know temperature changes, you can opt to interpolate the values of <em>k</em> and <em>n</em> between the empirical constraints because both parameters vary approximately linearly as a function of temperature. The Oomega Toolbox includes two helper functions that allow you to do this. Note that you can also use these functions to look up the <em>k</em> and <em>n</em> values for the experimental temperatures from each paper.</p>
-<p>The aragonitekinetics function uses the empirical constraints from <span class="citation" data-cites="burton1987">Burton and Walter (<a href="#ref-burton1987" role="doc-biblioref">1987</a>)</span>. It accepts temperature in °C as its input and outputs a two-item list of k and n values. Here is an example of how it works:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>tempC_arag <span class="ot">&lt;-</span> <span class="dv">27</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>kinetics_arag <span class="ot">&lt;-</span> <span class="fu">aragonitekinetics</span>(tempC_arag)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_arag<span class="sc">$</span>k)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 41.35</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_arag<span class="sc">$</span>n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 1.816667</code></pre>
-</div>
-</div>
-<p>The calcitekinetics function gives you the choice of the empirical constraints from <span class="citation" data-cites="burton1987">Burton and Walter (<a href="#ref-burton1987" role="doc-biblioref">1987</a>)</span> or from <span class="citation" data-cites="lopez2009">Lopez, Zuddas, and Faivre (<a href="#ref-lopez2009" role="doc-biblioref">2009</a>)</span>. It accepts temperature in °C as its required input and has an optional second input that you can use to swap data source. <span class="citation" data-cites="burton1987">Burton and Walter (<a href="#ref-burton1987" role="doc-biblioref">1987</a>)</span> is the default data source. It is recommended to choose <span class="citation" data-cites="burton1987">Burton and Walter (<a href="#ref-burton1987" role="doc-biblioref">1987</a>)</span> constraints if your application is comparing calcite and aragonite so that the kinetics for both minerals come from the same source. Here are examples of how this function works:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>tempC_calc <span class="ot">&lt;-</span> <span class="dv">27</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>kinetics_calc_BW <span class="ot">&lt;-</span> <span class="fu">calcitekinetics</span>(tempC_calc)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_calc_BW<span class="sc">$</span>k)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 3.866667</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_calc_BW<span class="sc">$</span>n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 1.966667</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>kinetics_calc_L <span class="ot">&lt;-</span> <span class="fu">calcitekinetics</span>(tempC_calc,<span class="at">datasource =</span> <span class="st">&quot;Lopezetal&quot;</span>)</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_calc_L<span class="sc">$</span>k)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 2.184406</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(kinetics_calc_L<span class="sc">$</span>n)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 1.901333</code></pre>
-</div>
-</div>
-<p>You can use the outputs of these functions, or other kinetic parameters you derive from a different source, to set the kinetics in the OomegaSolver function:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>Oomega_kinetics <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D,</span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                                <span class="at">k =</span> kinetics_arag<span class="sc">$</span>k,</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>                                <span class="at">n =</span> kinetics_arag<span class="sc">$</span>n)</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega_kinetics)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4.567672</code></pre>
-</div>
-</div>
-</section>
-<section id="mineral-properties" class="level4">
-<h4 class="anchored" data-anchor-id="mineral-properties">Mineral properties</h4>
-<p>OomegaSolver includes two parameters that can be customized to fit the properties of the original mineralogy of the ooid: density (kg/m<sup>3</sup>) and molar mass (g/mol). There are no helper functions to solve for these, but recommended values for density are 2800 kg/m<sup>3</sup> for aragonite (default) and 2700 kg/m<sup>3</sup> for calcite; the molar mass of CaCO<sub>3</sub> is 100.0869 g/mol (this is set as the default) - this would need to be different if, for example, you wanted to model ikaite or another hydrated calcium carbonate mineral. Here is an example of how to set density for calcite:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>Oomega_calc <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D,</span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>                            <span class="at">k =</span> kinetics_calc_BW<span class="sc">$</span>k,</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>                            <span class="at">n =</span> kinetics_calc_BW<span class="sc">$</span>n,</span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">rho_s =</span> <span class="dv">2700</span>)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega_calc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 10.82341</code></pre>
-</div>
-</div>
-</section>
-<section id="fluid-properties" class="level4">
-<h4 class="anchored" data-anchor-id="fluid-properties">Fluid properties</h4>
-<p>The density and kinematic viscosity of the fluid (i.e., seawater or lake water) are also parameters that can be adjusted. For example, for seawater both of these properties vary as a function of temperature and salinity. The Oomega Toolbox includes two helper functions for calculating these parameters: seawaterdensity and seawaterdynamicviscosity. There is a paucity of comparable studies to estimate the density and viscosity of lake waters as a function of temperature and salinity (or, alternatively, ionic strength), but using seawater-based estimates is certainly going to be better than assuming pure water values.</p>
-<p>The seawaterdensity function is an implementation of <span class="citation" data-cites="millero1981">Millero and Poisson (<a href="#ref-millero1981" role="doc-biblioref">1981</a>)</span> and is valid for temperatures in the range of -2 to 40°C and salinities in the range of 0-42 g/kg. Additional functions are available in the literature for temperatures and/or salinities outside of this range, and/or for elevated pressures <span class="citation" data-cites="nayar2016 sharqawy2010">(<a href="#ref-nayar2016" role="doc-biblioref">Nayar et al. 2016</a>; <a href="#ref-sharqawy2010" role="doc-biblioref">Sharqawy, Lienhard, and Zubair 2010</a>)</span>. This is a simple function that requires temperature in °C and salinity in g/kg as its inputs:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>sal_sw <span class="ot">&lt;-</span> <span class="dv">37</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>rho_sw <span class="ot">&lt;-</span> <span class="fu">seawaterdensity</span>(tempC_arag,sal_sw)</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(rho_sw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 1024.806</code></pre>
-</div>
-</div>
-<p>The seawaterdynamicviscosity function is an implementation of <span class="citation" data-cites="isdale1972">Isdale, Spence, and Tudhope (<a href="#ref-isdale1972" role="doc-biblioref">1972</a>)</span> and is valid for temperatures in the range of 10 to 180°C and salinities in the range of 0-150 g/kg. Again, additional functions are available in the literature for temperatures and/or salinities outside of this range, and/or for elevated pressures <span class="citation" data-cites="nayar2016 sharqawy2010">(<a href="#ref-nayar2016" role="doc-biblioref">Nayar et al. 2016</a>; <a href="#ref-sharqawy2010" role="doc-biblioref">Sharqawy, Lienhard, and Zubair 2010</a>)</span>. This function calculates dynamic viscosity, 𝜇, but OomegaSolver requires kinematic viscosity, 𝜈, which can be easily calculated as: <span class="math inline">\(\nu=\frac{\mu}{\rho_f}\)</span>, where <span class="math inline">\(\rho_f\)</span> is the fluid density. This is also a simple function that requires temperature in °C and salinity in g/kg as its inputs:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>mu_sw <span class="ot">&lt;-</span> <span class="fu">seawaterdynamicviscosity</span>(tempC_arag,sal_sw)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>nu_sw <span class="ot">&lt;-</span> mu_sw<span class="sc">/</span>rho_sw</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(nu_sw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 8.99352e-07</code></pre>
-</div>
-</div>
-<p>You can use the outputs of these functions, or other algorithms that you choose, to set the fluid property parameters in OomegaSolver:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>Oomega_sw <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D,</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">k =</span> kinetics_arag<span class="sc">$</span>k,</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">n =</span> kinetics_arag<span class="sc">$</span>n,</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">rho_f =</span> rho_sw,</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">nu =</span> nu_sw)</span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega_sw)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4.640464</code></pre>
-</div>
-</div>
-</section>
-<section id="other-sediment-transport-parameters" class="level4">
-<h4 class="anchored" data-anchor-id="other-sediment-transport-parameters">Other sediment transport parameters</h4>
-<p>There are two additional parameters that can be modified:</p>
-<ul>
-<li><p><em>H</em>, water depth (m) - this is pretty self-explanatory</p></li>
-<li><p><em>f</em>, intermittency (dimensionless, 0&lt;<em>f</em>≤1, where f = 0 would imply no movement and f = 1 implies constant movement) - particularly for geological applications, this parameter is difficult to directly constrain, so the recommended approach is to run calculations across a plausible range of values, with the uncertainty with respect to intermittency driving much of the uncertainty in the <span class="math inline">\(\Omega\)</span> estimate <span class="citation" data-cites="trower2022">(<a href="#ref-trower2022" role="doc-biblioref">Trower et al. 2022</a>)</span>. It is possible to calculate theoretical minimum and maximum intermittency values; this approach will be addressed in a separate document.</p></li>
-</ul>
-<p>Here is the syntax to modify <em>H</em> and <em>f</em>:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>H <span class="ot">&lt;-</span> <span class="dv">2</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>Oomega_H <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D,</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">k =</span> kinetics_arag<span class="sc">$</span>k,</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">n =</span> kinetics_arag<span class="sc">$</span>n,</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">H =</span> H)</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega_H)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 4.561364</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>f <span class="ot">&lt;-</span> <span class="fl">0.1</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>Oomega_f <span class="ot">&lt;-</span> <span class="fu">OomegaSolver</span>(D,</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>                         <span class="at">k =</span> kinetics_arag<span class="sc">$</span>k,</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>                         <span class="at">n =</span> kinetics_arag<span class="sc">$</span>n,</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>                         <span class="at">intermittency =</span> f)</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Oomega_f)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] 3.854</code></pre>
+<pre><code>[1] 0.02284374 0.10941955 0.27356540</code></pre>
 </div>
 </div>
 </section>
 </section>
+<section id="maximum-intermittency" class="level2">
+<h2 class="anchored" data-anchor-id="maximum-intermittency">Maximum intermittency</h2>
+<section id="theory-1" class="level3">
+<h3 class="anchored" data-anchor-id="theory-1">Theory</h3>
+<p>In analogy to the critical intermittency calculation, which explores the conditions under which transport (and, therefore, abrasion) can no longer keep up with precipitation, a maximum intermittency can be calculated using the conditions under which precipitation can no longer keep up with abrasion. This requires assuming a maximum plausible <span class="math inline">\(\Omega\)</span> value for the system. When using this function, keep in mind that this is most likely to provide a useful constraint for larger ooids, for which abrasion rates for frequent transport are very high.</p>
 </section>
-<section id="deqsolver" class="level2">
-<h2 class="anchored" data-anchor-id="deqsolver">DeqSolver</h2>
-<p>The DeqSolver function is structured in a similar way to and has similar optional parameters as OomegaSolver, but is designed to accept <span class="math inline">\(\Omega\)</span> as an input and return the calculated equilibrium grain diameter (<em>D<sub>eq</sub></em>) as the output. This function requires the uniroot.all function from the rootSolve package.</p>
+<section id="maximum-omega" class="level3">
+<h3 class="anchored" data-anchor-id="maximum-omega">Maximum <span class="math inline">\(\Omega\)</span></h3>
+<p>The most important parameter of this calculation is the maximum <span class="math inline">\(\Omega\)</span> value. For normal seawater, a good starting place for this value is the threshold of homogeneous nucleation (<span class="math inline">\(\Omega\)</span> = 20-25) <span class="citation" data-cites="morse1997 sun2015">(<a href="#ref-morse1997" role="doc-biblioref">Morse, Wang, and Tsio 1997</a>; <a href="#ref-sun2015" role="doc-biblioref">Sun et al. 2015</a>)</span>, because beyond this value, aragonite and calcite would rapidly crash out of solution and it is difficult to explain why high supersaturations could be maintained for the &gt;1000 year timescales required for ooids to form.</p>
+</section>
+<section id="other-parameters-1" class="level3">
+<h3 class="anchored" data-anchor-id="other-parameters-1">Other parameters</h3>
+<p>As with the critical intermittency solver function, this function also has some additional customizable parameters. It is most important that these match the conditions that you plan to use for your OomegaSolver application. See the OomegaSolver documentation for more information about these parameters.</p>
+</section>
 <section id="basic-syntax-1" class="level3">
 <h3 class="anchored" data-anchor-id="basic-syntax-1">Basic syntax</h3>
-<p>As with OomegaSolver, DeqSolver is designed so it can be run with <span class="math inline">\(\Omega\)</span> as the only input, with all other parameters coming with default values set. Here is a basic example:</p>
+<p>Here is a simple example of the syntax for this function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>Omega <span class="ot">&lt;-</span> <span class="dv">6</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>Deq <span class="ot">&lt;-</span> <span class="fu">DeqSolver</span>(Omega)</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Deq)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>D2 <span class="ot">&lt;-</span> <span class="dv">1000</span><span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>Omega_max <span class="ot">&lt;-</span> <span class="dv">20</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>f_max1 <span class="ot">&lt;-</span> <span class="fu">f_max_solver</span>(<span class="at">D =</span> D2,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                       <span class="at">Omega_max =</span> Omega_max)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_max1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 529.3634</code></pre>
+<pre><code>[1] 0.591103</code></pre>
 </div>
 </div>
-<p>Also similar to OomegaSolver, DeqSolver is not designed to take a vector as an input, so you need to use mapply if you want to calculate the <em>D<sub>eq</sub></em> for multiple values of <span class="math inline">\(\Omega\)</span> in a single line of code:</p>
+<p>This function can also be used for multiple values of D, or multiple values of <span class="math inline">\(\Omega\)</span> by using the mapply function:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>Omega_vector <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="at">from=</span><span class="dv">2</span>,<span class="at">to=</span><span class="dv">8</span>,<span class="at">by=</span><span class="dv">1</span>)</span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>Deq_vector <span class="ot">&lt;-</span> <span class="fu">mapply</span>(DeqSolver,<span class="at">Omega =</span> Omega_vector)</span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(Deq_vector)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>D_vector2 <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1000</span>,<span class="dv">2000</span>,<span class="dv">3000</span>)<span class="sc">*</span><span class="dv">10</span><span class="sc">^-</span><span class="dv">6</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>f_max2 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(f_max_solver,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>                  <span class="at">D =</span> D_vector2,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">Omega_max =</span> Omega_max)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_max2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 263.5742 305.9428 365.8731 444.4655 529.3634 615.4818 702.2035</code></pre>
+<pre><code>[1] 0.59110300 0.12639946 0.04984266</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>Omega_max_vector <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">20</span>,<span class="dv">22</span>,<span class="dv">24</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>f_max3 <span class="ot">&lt;-</span> <span class="fu">mapply</span>(f_max_solver,</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>                  <span class="at">D =</span> D2,</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>                  <span class="at">Omega_max =</span> Omega_max_vector)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(f_max3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.5911030 0.7411321 0.9103008</code></pre>
 </div>
 </div>
-</section>
-<section id="other-input-parameters-1" class="level3">
-<h3 class="anchored" data-anchor-id="other-input-parameters-1">Other input parameters</h3>
-<p>The other input parameters available to DeqSolver are the same as for OomegaSolver, so see the OomegaSolver <a href="#other-input-parameters">Other input parameters</a> section for more information on each parameter including available helper functions.</p>
 
 </section>
 </section>
 
 <div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
-<div id="ref-burton1987" class="csl-entry" role="listitem">
-Burton, Elizabeth A., and Lynn M. Walter. 1987. <span>“Relative Precipitation Rates of Aragonite and Mg Calcite from Seawater: Temperature or Carbonate Ion Control?”</span> <em>Geology</em> 15 (2): 111. <a href="https://doi.org/10.1130/0091-7613(1987)15&lt;111:rproaa&gt;2.0.co;2">https://doi.org/10.1130/0091-7613(1987)15&lt;111:rproaa&gt;2.0.co;2</a>.
+<div id="ref-morse1997" class="csl-entry" role="listitem">
+Morse, John W., Qiwei Wang, and Mai Yin Tsio. 1997. <span>“Influences of Temperature and Mg:Ca Ratio on CaCO3 Precipitates from Seawater.”</span> <em>Geology</em> 25 (1): 85. <a href="https://doi.org/10.1130/0091-7613(1997)025&lt;0085:iotamc&gt;2.3.co;2">https://doi.org/10.1130/0091-7613(1997)025&lt;0085:iotamc&gt;2.3.co;2</a>.
 </div>
-<div id="ref-isdale1972" class="csl-entry" role="listitem">
-Isdale, J. D., C. M. Spence, and J. S. Tudhope. 1972. <span>“Physical Properties of Sea Water Solutions: Viscosity.”</span> <em>Desalination</em> 10 (4): 319–28. <a href="https://doi.org/10.1016/s0011-9164(00)80002-8">https://doi.org/10.1016/s0011-9164(00)80002-8</a>.
+<div id="ref-smith2020" class="csl-entry" role="listitem">
+Smith, B. P., M. Ingalls, E. J. Trower, U. F. Lingappa, T. M. Present, J. S. Magyar, and W. W. Fischer. 2020. <span>“Physical Controls on Carbonate Intraclasts: Modern Flat Pebbles From Great Salt Lake, Utah.”</span> <em>Journal of Geophysical Research: Earth Surface</em> 125 (11). <a href="https://doi.org/10.1029/2020jf005733">https://doi.org/10.1029/2020jf005733</a>.
 </div>
-<div id="ref-kellerhals1975" class="csl-entry" role="listitem">
-Kellerhals, Rolf, John Shaw, and Vinod K. Arora. 1975. <span>“On Grain Size from Thin Sections.”</span> <em>The Journal of Geology</em> 83 (1): 79–96. <a href="https://doi.org/10.1086/628046">https://doi.org/10.1086/628046</a>.
-</div>
-<div id="ref-lopez2009" class="csl-entry" role="listitem">
-Lopez, Olivier, Pierpaolo Zuddas, and Damien Faivre. 2009. <span>“The Influence of Temperature and Seawater Composition on Calcite Crystal Growth Mechanisms and Kinetics: Implications for Mg Incorporation in Calcite Lattice.”</span> <em>Geochimica Et Cosmochimica Acta</em> 73 (2): 337–47. <a href="https://doi.org/10.1016/j.gca.2008.10.022">https://doi.org/10.1016/j.gca.2008.10.022</a>.
-</div>
-<div id="ref-millero1981" class="csl-entry" role="listitem">
-Millero, Frank J., and Alain Poisson. 1981. <span>“International One-Atmosphere Equation of State of Seawater.”</span> <em>Deep Sea Research Part A. Oceanographic Research Papers</em> 28 (6): 625–29. <a href="https://doi.org/10.1016/0198-0149(81)90122-9">https://doi.org/10.1016/0198-0149(81)90122-9</a>.
-</div>
-<div id="ref-nayar2016" class="csl-entry" role="listitem">
-Nayar, Kishor G., Mostafa H. Sharqawy, Leonardo D. Banchik, and John H. Lienhard V. 2016. <span>“Thermophysical Properties of Seawater: A Review and New Correlations That Include Pressure Dependence.”</span> <em>Desalination</em> 390 (July): 1–24. <a href="https://doi.org/10.1016/j.desal.2016.02.024">https://doi.org/10.1016/j.desal.2016.02.024</a>.
-</div>
-<div id="ref-sharqawy2010" class="csl-entry" role="listitem">
-Sharqawy, Mostafa H., John H. Lienhard, and Syed M. Zubair. 2010. <span>“Thermophysical Properties of Seawater: A Review of Existing Correlations and Data.”</span> <em>Desalination and Water Treatment</em> 16 (1-3): 354–80. <a href="https://doi.org/10.5004/dwt.2010.1079">https://doi.org/10.5004/dwt.2010.1079</a>.
+<div id="ref-sun2015" class="csl-entry" role="listitem">
+Sun, Wenhao, Saivenkataraman Jayaraman, Wei Chen, Kristin A. Persson, and Gerbrand Ceder. 2015. <span>“Nucleation of Metastable Aragonite CaCO <span><sub>3</sub></span> in Seawater.”</span> <em>Proceedings of the National Academy of Sciences</em> 112 (11): 3199–3204. <a href="https://doi.org/10.1073/pnas.1423898112">https://doi.org/10.1073/pnas.1423898112</a>.
 </div>
 <div id="ref-trower2022" class="csl-entry" role="listitem">
 Trower, Elizabeth J., Benjamin P. Smith, Ardiansyah I. Koeshidayatullah, and Jonathan L. Payne. 2022. <span>“Marine Ooid Sizes Record Phanerozoic Seawater Carbonate Chemistry.”</span> <em>Geophysical Research Letters</em> 49 (22). <a href="https://doi.org/10.1029/2022gl100800">https://doi.org/10.1029/2022gl100800</a>.
-</div>
-<div id="ref-zhong1989" class="csl-entry" role="listitem">
-Zhong, Shaojun, and Alfonso Mucci. 1989. <span>“Calcite and Aragonite Precipitation from Seawater Solutions of Various Salinities: Precipitation Rates and Overgrowth Compositions.”</span> <em>Chemical Geology</em> 78 (3-4): 283–99. <a href="https://doi.org/10.1016/0009-2541(89)90064-8">https://doi.org/10.1016/0009-2541(89)90064-8</a>.
 </div>
 </div></section></div></main>
 <!-- /main column -->

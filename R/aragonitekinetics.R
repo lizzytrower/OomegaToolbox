@@ -18,8 +18,6 @@
 
 aragonitekinetics <- function(tempC) {
   
-  library(pracma)
-  
   caln <- c(0.4, 1.7, 2.4)
   calk <- c(21.8, 40.6, 45.1)
   calT <- c(5, 25, 37)
@@ -35,10 +33,9 @@ aragonitekinetics <- function(tempC) {
   }
   
   if (tempC >= 5 && tempC <= 37) {
-    k <- interp1(calT, calk, tempC)
-    n <- interp1(calT, caln, tempC)
+    k <- pracma::interp1(calT, calk, tempC)
+    n <- pracma::interp1(calT, caln, tempC)
   }
   
   return(list(k = k, n = n))
 }
-
