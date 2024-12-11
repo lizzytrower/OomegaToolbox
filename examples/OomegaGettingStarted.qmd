@@ -177,7 +177,7 @@ Deq <- DeqSolver(Omega)
 print(Deq)
 ```
 
-Also similar to OomegaSolver, DeqSolver cannot take a vector as an input, so you need to use mapply if you want to calculate the *D~eq~* for multiple values of $\Omega$ in a single line of code:
+Also similar to OomegaSolver, DeqSolver is not designed to take a vector as an input, so you need to use mapply if you want to calculate the *D~eq~* for multiple values of $\Omega$ in a single line of code:
 
 ```{r DeqSolver-mapply}
 Omega_vector <- seq(from=2,to=8,by=1)

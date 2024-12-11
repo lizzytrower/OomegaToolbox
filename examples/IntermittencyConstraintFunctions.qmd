@@ -1,0 +1,111 @@
+---
+title: "Using Intermittency Constraint Functions"
+author: Lizzy Trower
+format: html
+embed-resources: true
+editor: visual
+theme: flatly
+toc: true
+bibliography: references.bib
+---
+
+## Introduction
+
+Intermittency (*f*) is a parameter in the OomegaSolver framework that describes the amount of time that ooids spend trapped within a bedform (i.e., a dune, or a ripple). This parameter is important because it scales the abrasion rate, using the assumption that grains are only abrading when they are actively being transported at the sediment surface, and not when they are at rest within a bedform. This parameter is difficult to constrain directly for applications to deep time, so instead the general approach has been to explore a range of plausible *f* values to capture the uncertainty with respect to this parameter [@trower2022].
+
+To augment this approach, the OomegaSolver package includes two additional functions that can be used to provide maximum and minimum constraints on intermittency. Note that these values should always be considered in the context of other information. For example, for many sand-sized ooids, the *f~max~* solver function will provide a value of 1, but this does not mean that constant transport is physically realistic. The sections below explain the theory behind, and application of these two functions.
+
+### Load libraries
+
+```{r load-libraries}
+library(OomegaToolbox)
+```
+
+## Critical (minimum) intermittency
+
+### Theory
+
+We define critical intermittency as the frequency of movement below which ooids will be cemented together (i.e., form a hardground), rather than continue to grow as independent coated grains. The calculation of this critical intermittency involves comparing the timescales for a critical cement thickness to form (here defined as a specific ratio of equilibrium grain diameter) and the dune storage time. When using this function, keep in mind that the critical intermittency is most likely to provide a useful constraint for smaller ooids, in which the critical cement thickness is small.
+
+### Cement thickness ratio
+
+The most important parameter here is the cement thickness ratio. In theory, the thickness of cement that would completely occlude the pore spaces between grains might scale directly with the grain diameter (cement thickness ratio = 1). However, field observations suggest that the cement thickness needed to form hardgrounds is much less than this, typically about 2-5% of the grain diameter [@smith2020]. In theory, this parameter could be constrained directly for geological or modern applications if there are hardground intraclasts in which the cement thickness can be measured.
+
+### Other parameters
+
+Importantly, the timescale for hardground formation is also dependent on precipitation rate (and therefore $\Omega$, *k*, and *n*). What should one choose for the $\Omega$ value here if the critical intermittency is being calculated prior to using measurements of grain diameter to solve for $\Omega$? One approach would be to choose a minimum plausible value for the system, such as $\Omega$ = 2. Alternatively, if this calculation is being applied to a modern system in which $\Omega$ is known, then that value can be used.
+
+This function also includes a variety of parameters to describe dune scale and wave properties, which are used to calculate the dune residence time. The defaults for the system were chosen to characterize the modern Ambergris shoal, but these values can be customized to fit your particular system.
+
+With respect to other customizable parameters, the key here is to use the same values as you plan to use for OomegaSolver so the conditions of the critical intermittency calculation match the planned application. See the documentation for OomegaSolver for more information about other parameters.
+
+### Basic syntax
+
+Here is a simple example of the syntax to use this function:
+
+```{r f_crit-basic}
+D <- 300*10^-6
+Omega_min <- 2
+f_crit1 <- f_crit_solver(D = D,
+                         Omega = Omega_min)
+print(f_crit1)
+```
+
+This function can also be used for multiple values of D, or multiple values of $\Omega$ by using the mapply function:
+
+```{r f_crit-mapply}
+D_vector <- c(300,400,500)*10^-6
+Omega_min <- 2
+f_crit2 <- mapply(f_crit_solver,
+                  D = D_vector,
+                  Omega = Omega_min)
+print(f_crit2)
+
+Omega_min_vector <- c(2,3,4)
+f_crit3 <- mapply(f_crit_solver,
+                  D = D,
+                  Omega = Omega_min_vector)
+print(f_crit3)
+```
+
+## Maximum intermittency
+
+### Theory
+
+In analogy to the critical intermittency calculation, which explores the conditions under which transport (and, therefore, abrasion) can no longer keep up with precipitation, a maximum intermittency can be calculated using the conditions under which precipitation can no longer keep up with abrasion. This requires assuming a maximum plausible $\Omega$ value for the system. When using this function, keep in mind that this is most likely to provide a useful constraint for larger ooids, for which abrasion rates for frequent transport are very high.
+
+### Maximum $\Omega$
+
+The most important parameter of this calculation is the maximum $\Omega$ value. For normal seawater, a good starting place for this value is the threshold of homogeneous nucleation ($\Omega$ = 20-25) [@morse1997; @sun2015], because beyond this value, aragonite and calcite would rapidly crash out of solution and it is difficult to explain why high supersaturations could be maintained for the \>1000 year timescales required for ooids to form.
+
+### Other parameters
+
+As with the critical intermittency solver function, this function also has some additional customizable parameters. It is most important that these match the conditions that you plan to use for your OomegaSolver application. See the OomegaSolver documentation for more information about these parameters.
+
+### Basic syntax
+
+Here is a simple example of the syntax for this function:
+
+```{r f_max-basic}
+D2 <- 1000*10^-6
+Omega_max <- 20
+f_max1 <- f_max_solver(D = D2,
+                       Omega_max = Omega_max)
+print(f_max1)
+```
+
+This function can also be used for multiple values of D, or multiple values of $\Omega$ by using the mapply function:
+
+```{r f_max-mapply}
+D_vector2 <- c(1000,2000,3000)*10^-6
+f_max2 <- mapply(f_max_solver,
+                  D = D_vector2,
+                  Omega_max = Omega_max)
+print(f_max2)
+
+Omega_max_vector <- c(20,22,24)
+f_max3 <- mapply(f_max_solver,
+                  D = D2,
+                  Omega_max = Omega_max_vector)
+print(f_max3)
+```

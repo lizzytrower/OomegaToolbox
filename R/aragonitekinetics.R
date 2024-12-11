@@ -41,3 +41,4 @@ aragonitekinetics <- function(tempC) {
   
   return(list(k = k, n = n))
 }
+

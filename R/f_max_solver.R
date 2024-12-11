@@ -1,18 +1,13 @@
-#' Oomega Solver
+#' Maximum Intermittency Calculator
 #' 
 #' @description
-#' Calculates the CaCO<sub>3</sub> saturation state (\eqn{\Omega}) value at which precipitation and abrasion rates are balanced for the given ooid diameter.
+#' Calculates the maximum intermittency, above which precipitation cannot keep up with rapid abrasion
 #' 
 #' @details
-#' This function is an R implementation of the OomegaSolver function described in the following references:
-#' 
-#' Ingalls, M., Fetrow, A. C., Snell, K. E., Frantz, C. M., & Trower, E. J. (2022). Lake level controls the recurrence of giant stromatolite facies. Sedimentology, 69(4), 1649–1674.
-#' 
-#' Trower, E. J., Smith, B. P., Koeshidayatullah, A. I., & Payne, J. L. (2022). Marine ooid sizes record Phanerozoic seawater carbonate chemistry. Geophysical Research Letters, 49(22), e2022GL100800.
-#' 
-#' The basic premise is to use measurements of ooid diameter (which may need to be corrected if measured from thin sections) to reconstruct the carbonate chemistry of the waters they formed in.
+#' This function uses a similar framework as OomegaSolver and DeqSolver to solve for the intermittency value at a theoretical maximum \eqn{\Omega} value for a system. The idea is that this maximum Omega represents the maximum precipitation rate in that system; therefore the intermittency at such a precipitation rate represents the maximum possible intermittency because beyond this value, precipitation will always be outpaced by abrasion. Note that for many conditions, this function may return a value of 1 because the scaling of abrasion rate with size means that this is not a useful constraint for smaller ooids. It can be useful for larger ooids.
 #' 
 #' @param D ooid diameter in m
+#' @param Omega_max \eqn{\Omega}, the CaCO<sub>3</sub> mineral saturation state, typically with respect to aragonite or calcite; here you should choose a maximum plausible value. For example, in normal seawater for aragonite precipitation, 20 is a reasonable maximum because it is the threshold of homogeneous nucleation.
 #' @param k CaCO<sub>3</sub> precipitation rate constant in umol/m<sup>2</sup>/hr, this is sensitive to temperature and mineralogy and can be set with an optional helper function
 #' @param n CaCO<sub>3</sub> precipitation reaction order (unitless), this is also sensitive to temperature and mineralogy and can be set with an optional helper function
 #' @param rho_s density of sediment in kg/m<sup>3</sup>, this is sensitive to mineralogy
@@ -20,40 +15,36 @@
 #' @param rho_f density of fluid (kg/m<sup>3</sup>), this is sensitive to temperature and salinity, helper function for calculating seawater density is available in Oomega Toolbox package
 #' @param nu kinematic viscosity of fluid in m<sup>2</sup>/s, this is sensitive to temperature and salinity, helper function for calculating dynamic viscosity for seawater is available in Oomega Toolbox package; kinematic viscosity can be calculated from dynamic viscosity and density
 #' @param H water depth in m
-#' @param intermittency intermittency of movement, must be in the range 0-1 where 0 implies no movement and 1 implies constant movement
-#' @returns calculated \eqn{\Omega} value
+#' @returns maximum intermittency (unitless)
 #' @examples
-#' Omega <- OomegaSolver(D = 500*10^-6,
-#'                       H = 2,
-#'                       intermittency = 0.1)
-#'                       
-#' Omega <- mapply(OomegaSolver, 
-#'                 D = c(400,500,600)*10^-6, 
-#'                 H = 1.5)
+#' f_max1 <- f_max_solver(2000*10^-6,20)
+#' f_max2 <- mapply(f_max_solver,D=2000*10^-6,Omega_max = seq(from=20,to=25,by=0.5))
+#' f_max3 <- mapply(f_max_solver,D=seq(from=1000,to=2000,by=100)*10^-6,Omega_max=20)
 #' 
 #' @export
 
-OomegaSolver <- function(
+f_max_solver <- function(
     D, #grain diameter (m)
+    Omega_max,
     k = 10^1.11, #rate constant (umol/m^2/hr)
     n = 2.26, #reaction order
     rho_s = 2800, #density of sediment (kg/m^3)
     M_min = 100.0869, #molar mass of mineral (g/mol)
     rho_f = 1025, #density of fluid (kg/m^3)
     nu = 9.37*10^-7, #kinematic viscosity of fluid (m^2/s)
-    H = 1, #water depth (m)
-    intermittency = 0.15) {
+    H = 1 #water depth (m)
+) {
   
   R <- (rho_s - rho_f)/rho_f #submerged specific density
   A1 <- 0.36 #(dimensionless)
   kv <- 9*10^5 #(dimensionless)
-  young <- 20*10^9 #Young's modulus (Pa)
+  young <- 20*10^9 #Youngs' modulus (Pa)
   strength <- 1*10^6 #tensile strength (Pa)
+  g <- 9.81 #acceleration due to gravity (m/s^2)
   Rouse <- 2.5 #(dimensionless)
   Stc <- 9 #Stokes threshold (dimensionless)
-  CSF <- 1 #Corey Shape Factor, 1 is for spheres, 0.8 is for natural
-  PS <- 6 #Powers roundness, 6 is for spheres, 3.5 is for natural
-  g <- 9.81 #acceleration due to gravity (m/s^2)
+  CSF <- 1 #1 is for spheres, 0.8 is for natural
+  PS <- 6 #6 is for spheres, 3.5 is for natural
   
   #set critical Shields number (following Li et al., 2021):
   if (D <= 2*10^-3){
@@ -68,6 +59,12 @@ OomegaSolver <- function(
   if (D > 8*10^-3) {
     tau_c <- 0.045
   }
+  
+  #standard carbonate precipitation rate function
+  R_precip <- k*(Omega_max-1)^n #(umol/m^2/hr)
+  #calculate specific surface area
+  SSA_ooid <- pi*23*D^2 #(m^2)
+  R_growth <- R_precip*M_min*10^(-9)*SSA_ooid/rho_s
   
   #calculate settling velocity
   Dstar <- (R*g*D^3)/(nu^2)
@@ -176,9 +173,10 @@ OomegaSolver <- function(
   
   R_abrasion_val <- En_suspt_st*Efactor*A1*4*pi*(D/2)^2
   
-  SSA_ooid <- pi*23*D^2 #(m^2)
+  f <- R_growth/R_abrasion_val
+  if (f>1) {
+    f <- 1
+  }
   
-  Oomega <- (R_abrasion_val*intermittency*rho_s/(k*M_min*10^-9*SSA_ooid))^(1/n)+1
-  
-  return(Oomega)
+  return(f)
 }
